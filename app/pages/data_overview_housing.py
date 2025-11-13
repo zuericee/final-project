@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-from drafts.cleaning_Wohnungsbestand import load_data
+from drafts.cleaning_housing import load_housing_data
 
-df = load_data()
+df = load_housing_data()
 
 st.set_page_config(page_title="Wohnungsbestand Viewer", layout="wide")
 
