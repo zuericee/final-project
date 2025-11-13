@@ -44,3 +44,18 @@ fig_growth = px.line(
 )
 
 st.plotly_chart(fig_growth, use_container_width=True)
+
+st.subheader("What is the population distribution across districts in 2024?")
+
+df_2024 = df[df['jahr'] == 2024]
+
+fig_2024 = px.bar(
+    df_2024,
+    x='district',
+    y='population',
+    labels={'district': '', 'population': ''}
+)
+
+fig_2024.update_layout(xaxis_tickangle=-45)
+
+st.plotly_chart(fig_2024, use_container_width=True)
