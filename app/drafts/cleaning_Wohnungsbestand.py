@@ -18,7 +18,7 @@ def load_data(debug=False):
     for sheet in xls.sheet_names:
         if not sheet.isdigit():
             continue
-        temp_df = pd.read_excel(wohnungen_path, sheet_name=sheet, skiprows=7)
+        temp_df = pd.read_excel(wohnungen_path, sheet_name=sheet, skiprows=9)
         temp_df["jahr"] = int(sheet)
         all_dfs.append(temp_df)
         if debug:
@@ -26,6 +26,10 @@ def load_data(debug=False):
             print(temp_df.head())
 
     df_wohnungen = pd.concat(all_dfs, ignore_index=True)
+
+    #Rename first column and drop unwanted columns
+    df_wohnungen.rename(columns={df_wohnungen.columns[0]: "City district"}, inplace=True)
+    df_wohnungen.drop(df_wohnungen.columns[10:13], axis=1, inplace=True)
 
     if debug:
         print("Combined DataFrame:")
