@@ -11,9 +11,9 @@ def load_rent_data():
     #Shorter, easier-to-use names
     df = df.rename(columns={
     'stichtagdatjahr': 'year',
-    'raumeinheitlang': 'unit_type',
-    'gliederunglang': 'category_type',
-    'zimmerlang': 'rooms',
+    'raumeinheitlang': 'area_type',
+    'gliederunglang': 'district',
+    'zimmersort': 'rooms',
     'gemeinnuetziglang': 'nonprofit',
     'einheitlang': 'unit_kind',
     'preisartlang': 'price_type'
@@ -25,7 +25,7 @@ def load_rent_data():
     #Reset the index
     df = df.reset_index(drop=True)
     # Delete multiple columns
-    df.drop(columns=["rooms", "stichtagdatmonat", "gemeinnuetzigsort", "einheitsort", "preisartsort", "raumeinheitsort"], inplace=True)
+    df.drop(columns=["zimmerlang", "stichtagdatmonat", "gemeinnuetzigsort", "einheitsort", "preisartsort", "raumeinheitsort", "gliederungsort"], inplace=True)
     return df
 
 df = load_rent_data()
