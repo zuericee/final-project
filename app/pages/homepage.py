@@ -54,12 +54,13 @@ st.subheader("Your chances of finding affordable housing per district")
 
 if salary > 0:
     merged_df["chance"] = 1 - (merged_df["mean"] / (salary * 0.3))
-    merged_df["chance"] = merged_df["chance"].clip(0, 1)
+    merged_df["chance"] = merged_df["chance"].clip(0, 1) * 100  # convert to percent
 
     fig = px.bar(
         merged_df,
         x="district",
         y="chance",
-        labels={"chance": "", "district": ""},
+        labels={"chance": "Chance (%)", "district": ""},
     )
+    fig.update_yaxes(range=[0, 100])  # force axis from 0 to 100%
     st.plotly_chart(fig, use_container_width=True)
