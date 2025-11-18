@@ -25,7 +25,7 @@ def load_rent_data():
     #Reset the index
     df = df.reset_index(drop=True)
     # Delete multiple columns
-    df.drop(columns=["rooms", "stichtagdatmonat", "gemeinnuetzigsort", "einheitsort", "preisartsort"], inplace=True)
+    df.drop(columns=["rooms", "stichtagdatmonat", "gemeinnuetzigsort", "einheitsort", "preisartsort", "raumeinheitsort"], inplace=True)
     return df
 
 df = load_rent_data()
