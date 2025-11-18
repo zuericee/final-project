@@ -6,51 +6,52 @@ from drafts.cleaning_housing import load_housing_data
 
 df = load_housing_data()
 
-st.set_page_config(page_title="Wohnungsbestand Viewer", layout="wide")
+st.set_page_config(page_title="Housing Viewer", layout="wide")
 
 st.header("Zurich's Housing Stock per District from 2008 to 2024")
 
 st.subheader("Raw Data Preview")
 
 #Filter by year
-years = sorted(df["jahr"].unique())
+years = sorted(df["year"].unique())
 selected_year = st.selectbox("Select year:", years)
-filtered_df = df[df["jahr"] == selected_year]
+filtered_df = df[df["year"] == selected_year]
 
 st.dataframe(filtered_df)
 
-st.subheader("How has the total housing stock per city district changed over time?")
+st.subheader("How has the total housing stock in the city and per district changed over time?")
 
 #Dropdown for city district selection
-district_options = df['City district'].unique()
+district_options = df['district'].unique()
 selected_district_time = st.selectbox("Select a city district:", district_options, key="time_chart_selectbox")
 
 #Filter the DataFrame based on selection
-filtered_df = df[df['City district'] == selected_district_time]
+filtered_df = df[df['district'] == selected_district_time]
 
 #Plotly line chart
 fig = px.line(
     filtered_df,
-    x='jahr',
-    y='Total',
+    x='year',
+    y='total housing units',
 )
 
 fig.update_layout(
     xaxis_title="",
-    yaxis_title=""
+    yaxis_title="",
+    yaxis=dict(range=[0, filtered_df['total housing units'].max() * 1.1])  # starts at 0
 )
 
 #Display chart in Streamlit
 st.plotly_chart(fig)
 
-st.subheader("What is the distribution of apartment types per district in 2024?")
+st.subheader("What is the distribution of apartment types in the city and per district in 2024?")
 
 #Dropdown to select city district
-district_options = df['City district'].unique()
+district_options = df['district'].unique()
 selected_district_bar = st.selectbox("Select a city district:", district_options, key="bar_chart_selectbox")
 
 # Filter rows by selected city district and year 2024
-filtered_df = df[(df['City district'] == selected_district_bar) & (df.iloc[:, -1] == 2024)]
+filtered_df = df[(df['district'] == selected_district_bar) & (df.iloc[:, -1] == 2024)]
 
 if not filtered_df.empty:
     # Take the first matching row

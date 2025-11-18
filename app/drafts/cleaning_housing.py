@@ -1,38 +1,42 @@
 import os
 import pandas as pd
 
-def load_housing_data(debug=False):
-    # Prepare Paths for Data Reading
+def load_housing_data():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.path.join(script_dir, "raw_data")
     wohnungen_path = os.path.join(data_dir, "Wohnungsbestand.xlsx")
-
-    # Optionally print all sheets
     xls = pd.ExcelFile(wohnungen_path)
-    if debug:
-        print("Available sheets:")
-        print(xls.sheet_names)
-
-    # Combine all years into one DataFrame
+    
+    #Combine all years into one DataFrame
     all_dfs = []
     for sheet in xls.sheet_names:
         if not sheet.isdigit():
             continue
         temp_df = pd.read_excel(wohnungen_path, sheet_name=sheet, skiprows=9)
+        # Keep only rows where the first column is "Kreis 1" to "Kreis 12"
+        allowed_districts = [f"Kreis {i}" for i in range(1, 13)] + ["Ganze Stadt"]
+        temp_df = temp_df[temp_df.iloc[:, 0].isin(allowed_districts)]
+        
         temp_df["jahr"] = int(sheet)
         all_dfs.append(temp_df)
-        if debug:
-            print(f"Loaded sheet: {sheet}")
-            print(temp_df.head())
 
     df_wohnungen = pd.concat(all_dfs, ignore_index=True)
 
-    #Rename first column and drop unwanted columns
-    df_wohnungen.rename(columns={df_wohnungen.columns[0]: "City district"}, inplace=True)
+    #Rename columns and drop unwanted columns
+    df_wohnungen.rename(
+        columns={
+            df_wohnungen.columns[0]: "district",
+            df_wohnungen.columns [1]: "total housing units",
+            df_wohnungen.columns [2]: "1 room",
+            df_wohnungen.columns [3]: "2 rooms",
+            df_wohnungen.columns [4]: "3 rooms",
+            df_wohnungen.columns [5]: "4 rooms",
+            df_wohnungen.columns [6]: "5 rooms",
+            df_wohnungen.columns [7]: "6 rooms",
+            df_wohnungen.columns [8]: "7 rooms",
+            df_wohnungen.columns [9]: "8 rooms and more",
+            }, inplace=True)
+    df_wohnungen.rename(columns={"jahr": "year"}, inplace=True)
     df_wohnungen.drop(df_wohnungen.columns[10:13], axis=1, inplace=True)
-
-    if debug:
-        print("Combined DataFrame:")
-        print(df_wohnungen.head())
 
     return df_wohnungen

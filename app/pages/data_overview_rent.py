@@ -7,32 +7,34 @@ from drafts.cleaning_rent import load_rent_data
 
 df = load_rent_data()
 
-st.set_page_config(page_title="Miete Viewer", layout="wide")
+st.set_page_config(page_title="Rent Viewer", layout="wide")
 st.header("Rent Prices in Zurich per District")
 
 st.sidebar.header("Filter Options")
 
 #Year filter
-years = sorted(df['year'].dropna().unique())
-selected_year = st.sidebar.selectbox("Select Year", years)
-
-st.sidebar.header("Filter Options")
+years = df['year'].dropna().unique()
+selected_year = st.sidebar.selectbox("Select year:", years)
 
 #Geografischer Raum filter
-area_types = df['area_type'].unique()
-selected_raum = st.sidebar.selectbox("Select area type", area_types)
+area_types = df['area_type'].dropna().unique()
+selected_raum = st.sidebar.selectbox("Select area type:", area_types)
 
 #Number of rooms filter
 rooms = df['rooms'].dropna().unique()
-selected_rooms = st.sidebar.selectbox("Select number of rooms", rooms)
+selected_rooms = st.sidebar.selectbox("Select number of rooms:", rooms)
 
 #Brutto/Netto filter
 rent_types = df['price_type'].dropna().unique()
-selected_rent_type = st.sidebar.selectbox("Select brutto / netto", rent_types)
+selected_rent_type = st.sidebar.selectbox("Select brutto / netto:", rent_types)
+
+#Nonprofit filter
+nonprofit_options = df['nonprofit'].dropna().unique()
+selected_nonprofit = st.sidebar.selectbox("Select nonprofit / market price", nonprofit_options)
 
 #Price per m² / pro Wohnung filter
 unit_kinds = df['unit_kind'].dropna().unique()
-selected_unit = st.sidebar.selectbox("Select price type", unit_kinds)
+selected_unit = st.sidebar.selectbox("Select price type:", unit_kinds)
 
 # Filter the dataframe
 df_filtered = df[
@@ -40,7 +42,8 @@ df_filtered = df[
     (df['area_type'] == selected_raum) &
     (df['rooms'] == selected_rooms) &
     (df['price_type'] == selected_rent_type) &
-    (df['unit_kind'] == selected_unit)
+    (df['unit_kind'] == selected_unit) &
+    (df['nonprofit'] == selected_nonprofit)
 ]
 
 # Display filtered table
@@ -65,21 +68,20 @@ agg = (
 # --- PLOT ---
 fig, ax = plt.subplots(figsize=(8, 4))
 
-y_positions = range(len(agg))
+num_rows = len(agg)
+fig_height = max(4, num_rows * 0.5)  # 0.5 inch per row minimum
+fig, ax = plt.subplots(figsize=(8, fig_height))
 
-for i, row in agg.iterrows():
-    y = i
+y_positions = range(num_rows)
 
-    # 10–90 percentile line
-    ax.hlines(y, xmin=row["qu10"], xmax=row["qu90"], linewidth=8, alpha=0.2)
+for i, row in enumerate(agg.itertuples(index=False)):
+    y = y_positions[i]
 
-    # 25–75 percentile box
-    ax.hlines(y, xmin=row["qu25"], xmax=row["qu75"], linewidth=8, alpha=0.4)
+    ax.hlines(y, xmin=row.qu10, xmax=row.qu90, linewidth=8, alpha=0.2)
+    ax.hlines(y, xmin=row.qu25, xmax=row.qu75, linewidth=8, alpha=0.4)
+    ax.plot(row.qu50, y, marker="o", markersize=10)
 
-    # Median point
-    ax.plot(row["qu50"], y, marker="o", markersize=10)
-
-ax.set_yticks(list(y_positions))
+ax.set_yticks(y_positions)
 ax.set_yticklabels(agg["district"])
 ax.set_xlabel("Rent price (Median & Perzentile)")
 ax.grid(axis='x', linestyle='--', alpha=0.3)

@@ -6,11 +6,13 @@ from drafts.cleaning_population import load_population_data
 
 df = load_population_data()
 
-st.set_page_config(page_title="Bevölkerung Viewer", layout="wide")
+st.set_page_config(page_title="Population Viewer", layout="wide")
 
 st.header("Zurich's Population per District")
 
 st.subheader("Raw Data Preview")
+
+
 
 #Selection for year
 years = sorted(df['year'].dropna().unique())

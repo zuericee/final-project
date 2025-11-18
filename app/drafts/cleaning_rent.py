@@ -18,10 +18,7 @@ def load_rent_data():
     'einheitlang': 'unit_kind',
     'preisartlang': 'price_type'
     })
-    #Reshape summary stats to tidy format ---
-    #This will create a long format with percentile and confidence interval
-    stat_cols = ['mean','qu10','qu25','qu50','qu75','qu90']
-    ci_cols = ['meanl','meanu','qu10l','qu10u','qu25l','qu25u','qu50l','qu50u','qu75l','qu75u','qu90l','qu90u']
+   
     #Reset the index
     df = df.reset_index(drop=True)
     # Delete multiple columns
