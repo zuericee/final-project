@@ -36,7 +36,22 @@ def load_housing_data():
             df_wohnungen.columns [8]: "7 rooms",
             df_wohnungen.columns [9]: "8 rooms and more",
             }, inplace=True)
+    
     df_wohnungen.rename(columns={"jahr": "year"}, inplace=True)
     df_wohnungen.drop(df_wohnungen.columns[10:13], axis=1, inplace=True)
+
+    #Keep only columns we need for reshaping
+    room_cols = ["2 rooms", "3 rooms", "4 rooms"]
+
+    #Melt into long format: one row per district-year-room
+    df_wohnungen = df_wohnungen.melt(
+        id_vars=["district", "year", "total housing units"],
+        value_vars=room_cols,
+        var_name="rooms",
+        value_name="count"
+    )
+
+    #Clean the "rooms" column (extract the number only)
+    df_wohnungen["rooms"] = df_wohnungen["rooms"].str.extract(r"(\d)").astype(int)
 
     return df_wohnungen
