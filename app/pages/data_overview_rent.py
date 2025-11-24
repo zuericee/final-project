@@ -36,7 +36,7 @@ selected_nonprofit = st.sidebar.selectbox("Select nonprofit / market price", non
 unit_kinds = df['unit_kind'].dropna().unique()
 selected_unit = st.sidebar.selectbox("Select price type:", unit_kinds)
 
-# Filter the dataframe
+#Filter the dataframe
 df_filtered = df[
     (df['year'] == selected_year) &
     (df['area_type'] == selected_raum) &
@@ -46,13 +46,16 @@ df_filtered = df[
     (df['nonprofit'] == selected_nonprofit)
 ]
 
-# Display filtered table
+#Display filtered table
 st.subheader(f"Filtered Data: {selected_year}, {selected_raum}")
-st.dataframe(df_filtered)
+show_df = st.checkbox("Show merged dataframe")
+
+if show_df:
+    st.dataframe(df_filtered)
 
 st.subheader("Percentile Chart of Rent Prices")
 
-#AGGREGATE FOR PLOTTING
+#Aggregate for plotting
 agg = (
     df_filtered.groupby("district")
     .agg({

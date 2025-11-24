@@ -17,7 +17,10 @@ years = sorted(df["year"].unique())
 selected_year = st.selectbox("Select year:", years)
 filtered_df = df[df["year"] == selected_year]
 
-st.dataframe(filtered_df)
+show_df = st.checkbox("Show merged dataframe")
+
+if show_df:
+    st.dataframe(filtered_df)
 
 st.subheader("How has the total housing stock in the city and per district changed over time?")
 

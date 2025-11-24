@@ -10,7 +10,7 @@ def load_population_data():
     df.rename(columns={
     'StichtagDatJahr': 'year',
     'QuarSort': 'district number',
-    'QuarLang': 'quarter',
+    'QuarLang': 'neighbourhood',
     'AnzBestWir': 'population'
     }, inplace=True)
 
@@ -55,7 +55,7 @@ def load_population_data():
     "Kreis 3 südlicher Teil (Alt-Wiedikon und Friesenberg)": "Kreis 3",
     "Schwamendingen (ganzer Kreis 12)": "Kreis 12"
     }
-    df["district"] = df["quarter"].map(quarter_to_district)
+    df["district"] = df["neighbourhood"].map(quarter_to_district)
 
     total_rows = (
         df.groupby("year", as_index=False)["population"]

@@ -40,6 +40,10 @@ def load_housing_data():
     df_wohnungen.rename(columns={"jahr": "year"}, inplace=True)
     df_wohnungen.drop(df_wohnungen.columns[10:13], axis=1, inplace=True)
 
+    return df_wohnungen
+
+def reshape_housing_data():
+    df_wohnungen = load_housing_data()
     #Keep only columns we need for reshaping
     room_cols = ["2 rooms", "3 rooms", "4 rooms"]
 
@@ -51,7 +55,7 @@ def load_housing_data():
         value_name="count"
     )
 
-    #Clean the "rooms" column (extract the number only)
+       #Clean the "rooms" column (extract the number only)
     df_wohnungen["rooms"] = df_wohnungen["rooms"].str.extract(r"(\d)").astype(int)
-
+    
     return df_wohnungen
