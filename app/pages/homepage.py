@@ -51,7 +51,7 @@ import plotly.express as px
 import pandas as pd
 
 
-# --- USER INPUTS ---
+#User inputs
 salary = st.number_input(
     "Enter your monthly net salary (CHF):",
     min_value=1000,
@@ -72,35 +72,34 @@ selected_nonprofit = st.selectbox(
     key="nonprofit_input"
 )
 
-# --- FILTER DATA BY ROOMS AND NONPROFIT STATUS ---
+#Filter data by rooms and nonprofit status
 filtered_df = merged_df[
     (merged_df["rooms"] == selected_rooms) &
     (merged_df["nonprofit"] == selected_nonprofit)
 ].copy()
 
-# --- AGGREGATE PER DISTRICT ---
+#Aggregate per district
 agg_df = filtered_df.groupby("district", as_index=False).agg({
     "mean": "mean",              # average rent per district
     "population": "mean"         # use population as proxy for depth of market
 })
 
-# -------------------------
-# 1. RENT AFFORDABILITY SCORE
-# -------------------------
+
+#Rent affordability score
+
 agg_df["rent_ratio"] = agg_df["mean"] / salary
 agg_df["rent_score"] = (1 - agg_df["rent_ratio"]).clip(0, 1)
 
-# -------------------------
-# 2. POPULATION SIZE SCALING
-# -------------------------
+#Population size scaling
+
 # Larger population = more opportunities
 p_min, p_max = agg_df["population"].min(), agg_df["population"].max()
 agg_df["pop_score"] = (agg_df["population"] - p_min) / (p_max - p_min)
 
-# -------------------------
-# 3. FINAL SCORE
-# Rent dominates (80%), population moderates (20%)
-# -------------------------
+
+#Final score
+#Rent dominates (80%), population moderates (20%)
+
 agg_df["final_score"] = (
     0.8 * agg_df["rent_score"] +
     0.2 * agg_df["pop_score"]
@@ -108,9 +107,9 @@ agg_df["final_score"] = (
 
 agg_df = agg_df.dropna(subset=["final_score"])
 
-# -------------------------
-# 4. VISUALIZATION
-# -------------------------
+
+#Visualisation
+
 fig = px.bar(
     agg_df,
     x="district",
@@ -134,15 +133,55 @@ st.plotly_chart(fig, use_container_width=True)
 
 
 st.markdown("""
-**How we calculate the “likeliness” to find affordable housing:**
+### How this chart is calculated
 
-The height of each bar shows the **overall affordability and availability score** for the selected district, number of rooms, and housing type.  
-This score combines:
+To estimate your chances of finding affordable housing in each district, we combine three pieces of information:
 
-1. **Rent affordability** – how the average rent compares to your entered salary. Lower rent relative to income increases the score.  
-2. **Housing availability** – the number of housing units relative to the district’s population. More units per person increase the score.  
+**1. Your monthly salary**  
+You enter your net salary.  
+Housing is considered *affordable* if the monthly rent does not exceed **30% of your salary**.  
+Instead of a simple yes/no rule, we use a **continuous scale**:  
+- If the average rent in a district is below that threshold → score close to 1  
+- If it is above → the score decreases proportionally
 
-The score is weighted (70% rent, 30% availability) and scaled from 0 (least affordable) to 1 (most affordable).  
-A taller bar means housing in that district is **more likely to be available and affordable** for you.
+This avoids arbitrary cut-offs and reflects how “close” the rent is to being affordable.
+
+---
+
+**2. Rental prices in each district**  
+We use the average rent for homes matching your selected criteria:
+- housing type (gemeinnützig / nicht gemeinnützig)
+- number of rooms
+
+Districts with lower average rents will receive a higher score.
+
+---
+
+**3. District population size**  
+Larger districts generally offer more listings, more turnover, and more opportunities to find a flat.  
+Smaller districts may have very few available units, even if average rents look attractive.  
+We therefore scale the population between 0 and 1:
+- Larger population → higher availability score  
+- Smaller population → lower availability score
+
+This does **not** measure “density” or “crowdedness,” but rather the general depth of the market.
+
+---
+
+### Final score
+We combine the two components with different weights:
+
+- **80% rent affordability**
+- **20% district size (market depth)**
+
+This ensures that rent remains the primary factor, while still considering how likely it is to find an apartment in a given district.
+
+---
+
+### Interpretation
+- **Scores close to 1** → high likelihood of finding something affordable  
+- **Scores near 0** → low likelihood  
+- The chart is not a prediction of available apartments, but a simplified indicator based on current rents and the size of the housing market.
 """)
+
 
