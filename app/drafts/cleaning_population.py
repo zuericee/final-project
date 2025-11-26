@@ -17,7 +17,7 @@ def load_population_data():
     df.drop(columns=['district number'], inplace=True)
     
     # Mapping Quartier → Kreis
-    quarter_to_district = {
+    neighbourhood_to_district = {
     "Affoltern": "Kreis 11",
     "Albisrieden": "Kreis 9",
     "Alt-Wiedikon": "Kreis 3",
@@ -55,12 +55,12 @@ def load_population_data():
     "Kreis 3 südlicher Teil (Alt-Wiedikon und Friesenberg)": "Kreis 3",
     "Schwamendingen (ganzer Kreis 12)": "Kreis 12"
     }
-    df["district"] = df["neighbourhood"].map(quarter_to_district)
+    df["district"] = df["neighbourhood"].map(neighbourhood_to_district)
 
     total_rows = (
         df.groupby("year", as_index=False)["population"]
         .sum()
-        .assign(quarter="Ganze Stadt", district="Ganze Stadt")
+        .assign(neighbourhood="Ganze Stadt", district="Ganze Stadt")
     )
 
     df = pd.concat([df, total_rows], ignore_index=True)

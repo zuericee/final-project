@@ -17,7 +17,7 @@ selected_year = st.selectbox("Select year:", years)
 
 df_filtered = df[df['year'] == selected_year]
 
-show_df = st.checkbox("Show merged dataframe")
+show_df = st.checkbox("Show cleaned dataframe")
 if show_df:
     st.dataframe(df_filtered)
 

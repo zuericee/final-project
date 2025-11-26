@@ -40,7 +40,7 @@ merged_df['district'] = pd.Categorical(
 
 merged_df = merged_df.sort_values('district')
 
-show_df = st.checkbox("Show merged dataframe")
+show_df = st.checkbox("Show cleaned dataframe")
 
 if show_df:
     st.dataframe(merged_df)
