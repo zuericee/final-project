@@ -82,18 +82,13 @@ agg_df = filtered_df.groupby("district", as_index=False).agg({
     "population": "mean"         # use population as proxy for depth of market
 })
 
-
 #Rent affordability score
-
 agg_df["rent_ratio"] = agg_df["mean rent"] / salary
 agg_df["rent_score"] = (1 - agg_df["rent_ratio"]).clip(0, 1)
 
-#Population size scaling
-
-# Larger population = more opportunities
+#Larger population = more opportunities
 p_min, p_max = agg_df["population"].min(), agg_df["population"].max()
 agg_df["pop_score"] = (agg_df["population"] - p_min) / (p_max - p_min)
-
 
 #Final score
 #Rent dominates (80%), population moderates (20%)
@@ -112,7 +107,7 @@ fig = px.bar(
     agg_df,
     x="district",
     y="final_score",
-    color="mean rent",  # optional visual cue
+    color="mean rent",
     color_continuous_scale="Viridis",
     title=f"Likelihood to Find Affordable Housing — Salary CHF {salary:,.0f}, {selected_rooms} rooms, {selected_nonprofit}",
     labels={
@@ -128,7 +123,6 @@ fig.update_layout(
 )
 
 st.plotly_chart(fig, use_container_width=True)
-
 
 st.markdown("""
 **What this chart shows:**  
