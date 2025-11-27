@@ -86,7 +86,20 @@ for i, row in enumerate(agg.itertuples(index=False)):
 
 ax.set_yticks(y_positions)
 ax.set_yticklabels(agg["district"])
-ax.set_xlabel("Rent price (Median & Perzentile)")
+ax.set_xlabel("Rent price (Median & Percentiles)")
 ax.grid(axis='x', linestyle='--', alpha=0.3)
 
 st.pyplot(fig)
+
+st.markdown("""
+**What this chart shows:**  
+This visual displays the distribution of rents across Zurich and its districts.  
+
+- **Median:** The rent value that splits the data in half – half of rents are below, half above.  
+- **Quantile:** Shows the share of rents below a certain value. Example: the 25% quantile means 25% of rents are below this value.  
+- **Confidence Interval:** The 95% confidence interval indicates the range that likely contains the true rent value. City-wide intervals are about ±4% of the median or mean, while smaller areas can have higher uncertainty, up to 20%.  
+
+**Important notes:**  
+- Percentiles and medians help understand rent spread.  
+- Intervals show the reliability of estimates, especially for smaller districts.
+""")

@@ -16,7 +16,8 @@ def load_rent_data():
     'zimmersort': 'rooms',
     'gemeinnuetziglang': 'nonprofit',
     'einheitlang': 'unit_kind',
-    'preisartlang': 'price_type'
+    'preisartlang': 'price_type',
+    'mean': 'mean rent'
     })
    
     #Reset the index

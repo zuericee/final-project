@@ -64,3 +64,13 @@ fig_2024.update_layout(
 )
 
 st.plotly_chart(fig_2024, use_container_width=True)
+
+st.markdown("""
+**What this chart shows:**  
+How residents are distributed across districts for a selected year.  
+- Helps contextualize housing demand and availability.  
+
+**Important notes:**  
+- Does not account for population density within districts.  
+- Only permanent residents are included.
+""")

@@ -9,10 +9,12 @@ st.header("Can you afford to live in Zurich?")
 from drafts.cleaning_housing import reshape_housing_data
 from drafts.cleaning_population import load_population_data
 from drafts.cleaning_rent import load_rent_data
+from drafts.cleaning_income import load_income_data
 
 df_housing = reshape_housing_data()
 df_population = load_population_data()
 df_rent = load_rent_data()
+df_income = load_income_data()
 
 #Filter each data frame for year 2024
 df_housing_2024 = df_housing[df_housing['year'] == 2024]
@@ -23,7 +25,7 @@ df_housing_2024 = df_housing_2024.drop(columns=['year'])
 df_population_2024 = df_population_2024.drop(columns=['year'])
 df_rent_2024 = df_rent_2024.drop(columns=['year', 'area_type']) 
 
-# Merge all three data frames
+#Merge all three data frames
 merged_df = (
     df_rent_2024
         .merge(df_population_2024, on='district', how='outer')
@@ -40,16 +42,12 @@ merged_df['district'] = pd.Categorical(
 
 merged_df = merged_df.sort_values('district')
 
+st.subheader("Your chances of finding affordable housing per district (Data for 2024)")
+
 show_df = st.checkbox("Show cleaned dataframe")
 
 if show_df:
     st.dataframe(merged_df)
-
-st.subheader("Your chances of finding affordable housing per district")
-import streamlit as st
-import plotly.express as px
-import pandas as pd
-
 
 #User inputs
 salary = st.number_input(
@@ -80,14 +78,14 @@ filtered_df = merged_df[
 
 #Aggregate per district
 agg_df = filtered_df.groupby("district", as_index=False).agg({
-    "mean": "mean",              # average rent per district
+    "mean rent": "mean",              # average rent per district
     "population": "mean"         # use population as proxy for depth of market
 })
 
 
 #Rent affordability score
 
-agg_df["rent_ratio"] = agg_df["mean"] / salary
+agg_df["rent_ratio"] = agg_df["mean rent"] / salary
 agg_df["rent_score"] = (1 - agg_df["rent_ratio"]).clip(0, 1)
 
 #Population size scaling
@@ -114,13 +112,13 @@ fig = px.bar(
     agg_df,
     x="district",
     y="final_score",
-    color="mean",  # optional visual cue
+    color="mean rent",  # optional visual cue
     color_continuous_scale="Viridis",
     title=f"Likelihood to Find Affordable Housing — Salary CHF {salary:,.0f}, {selected_rooms} rooms, {selected_nonprofit}",
     labels={
         "district": "District",
         "final_score": "Likelihood (0–1)",
-        "mean": "Average Rent (CHF)"
+        "mean rent": "Average Rent (CHF)"
     },
 )
 
@@ -133,55 +131,143 @@ st.plotly_chart(fig, use_container_width=True)
 
 
 st.markdown("""
-### How this chart is calculated
+**What this chart shows:**  
+This visual estimates your **likelihood of finding an affordable apartment** in each district, based on your selected salary, number of rooms, and housing type.  
+- **High score (~1):** The district is likely affordable for you.  
+- **Low score (~0):** Housing is less affordable or scarce.  
 
-To estimate your chances of finding affordable housing in each district, we combine three pieces of information:
+**How it’s calculated:**  
+- 80% weight: average rent for apartments matching your criteria  
+- 20% weight: market depth approximated by district population  
 
-**1. Your monthly salary**  
-You enter your net salary.  
-Housing is considered *affordable* if the monthly rent does not exceed **30% of your salary**.  
-Instead of a simple yes/no rule, we use a **continuous scale**:  
-- If the average rent in a district is below that threshold → score close to 1  
-- If it is above → the score decreases proportionally
-
-This avoids arbitrary cut-offs and reflects how “close” the rent is to being affordable.
-
----
-
-**2. Rental prices in each district**  
-We use the average rent for homes matching your selected criteria:
-- housing type (gemeinnützig / nicht gemeinnützig)
-- number of rooms
-
-Districts with lower average rents will receive a higher score.
-
----
-
-**3. District population size**  
-Larger districts generally offer more listings, more turnover, and more opportunities to find a flat.  
-Smaller districts may have very few available units, even if average rents look attractive.  
-We therefore scale the population between 0 and 1:
-- Larger population → higher availability score  
-- Smaller population → lower availability score
-
-This does **not** measure “density” or “crowdedness,” but rather the general depth of the market.
-
----
-
-### Final score
-We combine the two components with different weights:
-
-- **80% rent affordability**
-- **20% district size (market depth)**
-
-This ensures that rent remains the primary factor, while still considering how likely it is to find an apartment in a given district.
-
----
-
-### Interpretation
-- **Scores close to 1** → high likelihood of finding something affordable  
-- **Scores near 0** → low likelihood  
-- The chart is not a prediction of available apartments, but a simplified indicator based on current rents and the size of the housing market.
+**Important notes:**  
+- Scores are **indicative, not guaranteed availability**.  
+- Only average rents are considered; specific listings may differ.  
+- Other costs (utilities, maintenance) are not included.
 """)
 
+#Rent burden metric: % of income spent on average rent
+
+#Filter for 2022
+df_housing_2022 = df_housing[df_housing['year'] == 2022]
+df_population_2022 = df_population[df_population['year'] == 2022]
+df_rent_2022 = df_rent[(df_rent['year'] == 2022) & (df_rent['area_type'] == "Stadtkreise") & (df_rent['price_type']=="Netto") & (df_rent['unit_kind']=="Wohnung")]
+df_income_2022 = df_income[df_income["year"] == 2022].copy()
+
+df_housing_2022 = df_housing_2022.drop(columns=['year'])
+df_population_2022 = df_population_2022.drop(columns=['year'])
+df_rent_2022 = df_rent_2022.drop(columns=['year', 'area_type']) 
+df_income_2022 = df_income_2022.drop(columns=['year'])
+
+#Aggregate median income per district (mean across tax tariffs)
+income_per_district = (
+    df_income_2022
+    .groupby("district", as_index=False)
+    .agg({"median income": "mean"})
+)
+
+#Merge with main dataframe
+merged_df = merged_df.merge(
+    income_per_district,
+    on="district",
+    how="left"
+)
+
+#Drop "Ganze Stadt" from dataframe
+merged_df = merged_df[merged_df["district"] != "Ganze Stadt"].copy()
+
+#Monthly income
+merged_df["median income"] = merged_df["median income"] * 1000 / 12
+
+#Compute rent burden
+merged_df["rent_burden"] = merged_df["mean rent"] / merged_df["median income"]
+
+# Classify burden
+merged_df["burden_class"] = pd.cut(
+    merged_df["rent_burden"],
+    bins=[0, 0.30, 0.40, float("inf")],
+    labels=["Affordable", "Stress", "Overburdened"]
+)
+
+st.subheader("Where Is Rent Hitting Residents Hardest? (Data for 2022)")
+
+show_df_rent = st.checkbox("Show cleaned dataframe", key="show_df_rent_checkbox")
+
+if show_df_rent:
+    st.dataframe(merged_df[["district", "rooms", "mean rent", "median income", "rent_burden", "burden_class"]])
+
+#Order districts by number
+district_order = ["Kreis " + str(i) for i in range(1, 13)]
+
+# --- User inputs ---
+selected_rooms = st.selectbox(
+    "Select number of rooms:",
+    options=sorted(merged_df["rooms"].unique())
+)
+
+selected_nonprofit = st.selectbox(
+    "Select housing type:",
+    options=merged_df["nonprofit"].unique()
+)
+
+# --- Filter data ---
+filtered_df = merged_df[
+    (merged_df["rooms"] == selected_rooms) &
+    (merged_df["nonprofit"] == selected_nonprofit)
+].copy()
+
+# --- Aggregate per district ---
+agg_df = filtered_df.groupby("district", as_index=False).agg({
+    "rent_burden": "mean",
+    "burden_class": lambda x: x.mode()[0]  # most frequent class
+})
+
+# Optional: order districts
+district_order = ["Kreis " + str(i) for i in range(1, 13)]
+agg_df = agg_df.sort_values("district", key=lambda x: x.map({k: i for i, k in enumerate(district_order)}))
+
+# --- Bar chart ---
+fig = px.bar(
+    agg_df,
+    x="district",
+    y="rent_burden",
+    color="burden_class",
+    category_orders={"district": district_order},
+    color_discrete_map={
+        "Affordable": "green",
+        "Stress": "orange",
+        "Overburdened": "red"
+    },
+    title=f"Rent Burden — {selected_rooms} Rooms, {selected_nonprofit}",
+    labels={
+        "district": "District",
+        "rent_burden": "Rent Burden",
+        "burden_class": "Burden Class"
+    },
+    text=agg_df["rent_burden"].apply(lambda x: f"{x:.0%}")
+)
+
+fig.update_layout(
+    yaxis=dict(tickformat=".0%"),
+    xaxis_title="District",
+    yaxis_title="Rent as % of Monthly Income",
+    uniformtext_minsize=8,
+    uniformtext_mode='hide'
+)
+
+st.plotly_chart(fig, use_container_width=True)
+
+st.markdown("""
+**What this chart shows:**  
+This bar chart shows **what percentage of monthly income is spent on rent** for each district:  
+
+- **Green (Affordable):** Rent ≤ 30% of income  
+- **Orange (Stress):** Rent 30–40% of income  
+- **Red (Overburdened):** Rent > 40% of income  
+
+**Important notes:**  
+- Percentages are based on **average rents** for selected apartment types.  
+- Districts with few apartments may have extreme values.  
+- This classification **does not account for other household costs**.
+""")
 
