@@ -276,8 +276,7 @@ This bar chart shows **what percentage of monthly income is spent on rent** for 
 - **Red (Overburdened):** Rent > 40% of income  
 
 **Important notes:**  
-- Percentages are based on **average rents** for selected apartment types.  
-- Districts with few apartments may have extreme values.  
-- This classification **does not account for other household costs**.
+- Percentages are based on **median salaries**, as an average of different tax tariffs and **average rents** for selected apartment types.  
+- Individual situations may vary significantly from these averages. Color shading does not account for houshold size.
 """)
 
