@@ -76,11 +76,27 @@ filtered_df = merged_df[
     (merged_df["nonprofit"] == selected_nonprofit)
 ].copy()
 
-#Aggregate per district
-agg_df = filtered_df.groupby("district", as_index=False).agg({
-    "mean rent": "mean",              # average rent per district
-    "population": "mean"         # use population as proxy for depth of market
-})
+# List the columns you want to aggregate
+agg_columns = {
+    "mean rent": "mean",
+    "population": "mean"
+}
+
+# Keep only the columns that actually exist in filtered_df
+valid_columns = {col: func for col, func in agg_columns.items() if col in filtered_df.columns}
+
+# Warn if any columns are missing
+missing_columns = [col for col in agg_columns if col not in filtered_df.columns]
+if missing_columns:
+    st.warning(f"Missing columns in data: {missing_columns}")
+
+# Perform aggregation only on valid columns
+if valid_columns:
+    agg_df = filtered_df.groupby("district", as_index=False).agg(valid_columns)
+else:
+    st.error("No valid columns available for aggregation.")
+    agg_df = pd.DataFrame()  # empty DataFrame as fallback
+
 
 #Rent affordability score
 agg_df["rent_ratio"] = agg_df["mean rent"] / salary
