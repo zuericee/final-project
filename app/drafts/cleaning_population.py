@@ -62,7 +62,7 @@ def load_population_data():
         .sum()
         .assign(neighbourhood="Ganze Stadt", district="Ganze Stadt")
     )
-
+    df = df[df['district'] != "Ganze Stadt"]
     return df
 
 df = load_population_data()
