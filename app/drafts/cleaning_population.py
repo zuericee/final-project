@@ -63,7 +63,6 @@ def load_population_data():
         .assign(neighbourhood="Ganze Stadt", district="Ganze Stadt")
     )
 
-    df = pd.concat([df, total_rows], ignore_index=True)
     return df
 
 df = load_population_data()

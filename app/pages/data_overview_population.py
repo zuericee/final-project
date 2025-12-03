@@ -24,7 +24,10 @@ if show_df:
 st.subheader("How has the population of Zurich changed over time?")
 
 #Group by year and sum population across all districts
-df_over_time = df.groupby('year', as_index=False)['population'].sum()
+df_over_time = (
+    df.groupby(['year', 'district'], as_index=False)['population'].sum()
+      .groupby('year', as_index=False)['population'].sum()
+)
 
 fig_growth = px.line(
     df_over_time,
