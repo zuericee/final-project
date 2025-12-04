@@ -2,10 +2,11 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
+# --- Page setup ---
 st.set_page_config(page_title="Can you afford to live in Zurich?", layout="wide")
-
 st.header("Can you afford to live in Zurich?")
 
+# --- Data loading ---
 from drafts.cleaning_housing import reshape_housing_data
 from drafts.cleaning_population import load_population_data
 from drafts.cleaning_rent import load_rent_data
@@ -16,145 +17,108 @@ df_population = load_population_data()
 df_rent = load_rent_data()
 df_income = load_income_data()
 
-#Filter each data frame for year 2024
-df_housing_2024 = df_housing[df_housing['year'] == 2024]
-df_population_2024 = df_population[df_population['year'] == 2024]
-df_rent_2024 = df_rent[(df_rent['year'] == 2024) & (df_rent['area_type'] == "Stadtkreise") & (df_rent['price_type']=="Netto") & (df_rent['unit_kind']=="Wohnung")]
+# --- Filter 2024 data ---
+df_population_2024 = df_population[df_population['year'] == 2024].drop(columns=['year'])
+df_rent_2024 = df_rent[
+    (df_rent['year'] == 2024) &
+    (df_rent['area_type'] == "Stadtkreise") &
+    (df_rent['price_type'] == "Netto") &
+    (df_rent['unit_kind'] == "Wohnung")
+].drop(columns=['year', 'area_type'])
 
-df_housing_2024 = df_housing_2024.drop(columns=['year'])
-df_population_2024 = df_population_2024.drop(columns=['year'])
-df_rent_2024 = df_rent_2024.drop(columns=['year', 'area_type']) 
+# --- Merge population and rent ---
+merged_df = df_rent_2024.merge(df_population_2024, on='district', how='outer')
 
-#Merge all three data frames
-merged_df = (
-    df_rent_2024
-        .merge(df_population_2024, on='district', how='outer')
-        .merge(df_housing_2024, on=['district', 'rooms'], how='outer')
-)
-
-order = ["Ganze Stadt"] + [f"Kreis {i}" for i in range(1, 13)]
-
-merged_df['district'] = pd.Categorical(
-    merged_df['district'],
-    categories=order,
-    ordered=True
-)
-
+# --- District order ---
+district_order = ["Ganze Stadt"] + [f"Kreis {i}" for i in range(1, 13)]
+merged_df['district'] = pd.Categorical(merged_df['district'], categories=district_order, ordered=True)
 merged_df = merged_df.sort_values('district')
 
+# --- UI: Data preview ---
 st.subheader("Your chances of finding affordable housing per district (Data for 2024)")
-
-show_df = st.checkbox("Show cleaned dataframe")
-
-if show_df:
+if st.checkbox("Show cleaned dataframe"):
     st.dataframe(merged_df)
 
-#User inputs
-salary = st.number_input(
-    "Enter your monthly net salary (CHF):",
-    min_value=1000,
-    max_value=30000,
-    step=100,
-    key="salary_input"
-)
+# --- User inputs ---
+salary = st.number_input("Enter your monthly net salary (CHF):", min_value=1000, max_value=30000, step=100)
+selected_rooms = st.selectbox("Select number of rooms:", options=[2, 3, 4])
 
-selected_rooms = st.selectbox(
-    "Select number of rooms:",
-    options=[2, 3, 4],
-    key="rooms_input"
-)
+# --- Filter by selected rooms ---
+filtered_df = merged_df[merged_df["rooms"] == selected_rooms].copy()
 
-selected_nonprofit = st.selectbox(
-    "Select housing type:",
-    options=["Gemeinnützig", "Nicht gemeinnützig"],
-    key="nonprofit_input"
-)
+# --- Aggregate across housing types ---
+agg_df = filtered_df.groupby("district", as_index=False).agg({
+    "mean rent": "mean"
+})
 
-#Filter data by rooms and nonprofit status
-filtered_df = merged_df[
-    (merged_df["rooms"] == selected_rooms) &
-    (merged_df["nonprofit"] == selected_nonprofit)
-].copy()
+# Compute housing growth for selected room number
+filtered_df_housing = df_housing[df_housing["rooms"]==selected_rooms].copy()
 
-# List the columns you want to aggregate
-agg_columns = {
-    "mean rent": "mean",
-    "population": "mean"
-}
+# Function to compute housing growth per district
+def compute_housing_growth(df, value_col="count"):
+    first_year = df[df["year"] == df["year"].min()].set_index("district")[value_col]
+    last_year = df[df["year"] == df["year"].max()].set_index("district")[value_col]
+    growth = ((last_year - first_year) / first_year).reset_index().rename(columns={value_col: "housing_growth"})
+    return growth
 
-# Keep only the columns that actually exist in filtered_df
-valid_columns = {col: func for col, func in agg_columns.items() if col in filtered_df.columns}
+# Keep only the last 3 years
+last_year = filtered_df_housing["year"].max()
+filtered_df_housing = filtered_df_housing[
+    filtered_df_housing["year"].isin([last_year - 2, last_year - 1, last_year])
+]
 
-# Warn if any columns are missing
-missing_columns = [col for col in agg_columns if col not in filtered_df.columns]
-if missing_columns:
-    st.warning(f"Missing columns in data: {missing_columns}")
+# Compute growth
+housing_growth = compute_housing_growth(filtered_df_housing)
 
-# Perform aggregation only on valid columns
-if valid_columns:
-    agg_df = filtered_df.groupby("district", as_index=False).agg(valid_columns)
-else:
-    st.error("No valid columns available for aggregation.")
-    agg_df = pd.DataFrame()  # empty DataFrame as fallback
+# Now you can merge it with your aggregated df
+agg_df = agg_df.merge(housing_growth, on="district", how="left")
 
+# --- Compute scores ---
+# Affordability: lower share of salary spent = higher score
+RENT_SHARE_MAX = 0.3  # 30% of salary is "modest"
+agg_df["rent_score"] = (1 - (agg_df["mean rent"] / salary) / RENT_SHARE_MAX).clip(0, 1)
 
-#Rent affordability score
-agg_df["rent_ratio"] = agg_df["mean rent"] / salary
-agg_df["rent_score"] = (1 - agg_df["rent_ratio"]).clip(0, 1)
+# Rescale housing growth to 0–1 across districts
+min_growth = agg_df["housing_growth"].min()
+max_growth = agg_df["housing_growth"].max()
+agg_df["growth_score"] = ((agg_df["housing_growth"] - min_growth) / (max_growth - min_growth)).clip(0, 1)
 
-#Larger population = more opportunities
-p_min, p_max = agg_df["population"].min(), agg_df["population"].max()
-agg_df["pop_score"] = (agg_df["population"] - p_min) / (p_max - p_min)
-
-#Final score
-#Rent dominates (80%), population moderates (20%)
-
-agg_df["final_score"] = (
-    0.8 * agg_df["rent_score"] +
-    0.2 * agg_df["pop_score"]
-).clip(0, 1)
-
-agg_df = agg_df.dropna(subset=["final_score"])
+# Combined final score
+agg_df["final_score"] = (0.7 * agg_df["rent_score"] + 0.3 * agg_df["growth_score"]).clip(0, 1)
 
 
-#Visualisation
 
+# --- Visualization ---
 fig = px.bar(
     agg_df,
     x="district",
     y="final_score",
     color="mean rent",
     color_continuous_scale="Viridis",
-    title=f"Likelihood to Find Affordable Housing — Salary CHF {salary:,.0f}, {selected_rooms} rooms, {selected_nonprofit}",
-    labels={
-        "district": "District",
-        "final_score": "Likelihood (0–1)",
-        "mean rent": "Average Rent (CHF)"
-    },
+    title=f"Likelihood to Find Affordable Housing — Salary CHF {salary:,.0f}, {selected_rooms} rooms",
+    labels={"district_str": "District", "final_score": "Likelihood (0–1)", "mean rent": "Average Rent (CHF)"},
+    hover_data=["mean rent", "rent_score", "growth_score"],
 )
-
-fig.update_layout(
-    yaxis=dict(range=[0, 1]),
-    bargap=0.25,
-)
-
+fig.update_layout(yaxis=dict(range=[0, 1]), bargap=0.25)
 st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("""
 **What this chart shows:**  
 This visual estimates your **likelihood of finding an affordable apartment** in each district, based on your selected salary, number of rooms, and housing type.  
-- **High score (~1):** The district is likely affordable for you.  
-- **Low score (~0):** Housing is less affordable or scarce.  
+
+- **High score (~1):** Rent is affordable and housing stock is growing.  
+- **Low score (~0):** Rent is high or housing stock growth is low.  
 
 **How it’s calculated:**  
-- 80% weight: average rent for apartments matching your criteria  
-- 20% weight: market depth approximated by district population  
+- 70% weight: average rent for apartments matching your criteria  
+- 30% weight: normalized housing stock growth per district  
 
 **Important notes:**  
-- Scores are **indicative, not guaranteed availability**.  
-- Only average rents are considered; specific listings may differ.  
-- Other costs (utilities, maintenance) are not included.
+- Scores are indicative.  
+- Only average rents are considered; actual listings may vary.  
 """)
+
+
 
 #Rent burden metric: % of income spent on average rent
 
@@ -192,7 +156,7 @@ merged_df["median income"] = merged_df["median income"] * 1000 / 12
 #Compute rent burden
 merged_df["rent_burden"] = merged_df["mean rent"] / merged_df["median income"]
 
-# Classify burden
+#Classify burden
 merged_df["burden_class"] = pd.cut(
     merged_df["rent_burden"],
     bins=[0, 0.30, 0.40, float("inf")],
@@ -211,12 +175,12 @@ district_order = ["Kreis " + str(i) for i in range(1, 13)]
 
 # --- User inputs ---
 selected_rooms = st.selectbox(
-    "Select number of rooms:",
+    "Select number of rooms:", key="rooms_selectbox",
     options=sorted(merged_df["rooms"].unique())
 )
 
 selected_nonprofit = st.selectbox(
-    "Select housing type:",
+    "Select housing type:", key="nonprofit_selectbox",
     options=merged_df["nonprofit"].unique()
 )
 

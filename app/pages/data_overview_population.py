@@ -23,20 +23,38 @@ if show_df:
 
 st.subheader("How has the population of Zurich changed over time?")
 
-#Group by year and sum population across all districts
-df_over_time = (
-    df.groupby(['year', 'district'], as_index=False)['population'].sum()
-      .groupby('year', as_index=False)['population'].sum()
+# --- City total over time ---
+df_city_total = df.groupby('year', as_index=False)['population'].sum()
+df_city_total['district'] = "Ganze Stadt"
+
+# --- District totals over time ---
+df_district_total = df.groupby(['year','district'], as_index=False)['population'].sum()
+
+# --- Combine city total + districts ---
+df_plot = pd.concat([df_city_total, df_district_total], ignore_index=True)
+
+# --- Multiselect for which districts to show (including city total) ---
+all_districts = sorted(df_plot['district'].unique())
+selected_districts = st.multiselect(
+    "Select districts to display:",
+    options=all_districts,
+    default=all_districts  # by default, show all
 )
 
-fig_growth = px.line(
-    df_over_time,
+# Filter for plotting
+df_plot_filtered = df_plot[df_plot['district'].isin(selected_districts)]
+
+# --- Plot ---
+fig = px.line(
+    df_plot_filtered,
     x='year',
     y='population',
+    color='district',
     markers=True,
-    labels={'year': '', 'population': ''}
+    labels={'year':'Year', 'population':'Population', 'district':'District'}
 )
-st.plotly_chart(fig_growth, use_container_width=True)
+
+st.plotly_chart(fig, use_container_width=True)
 
 st.subheader(f"Population distribution across Zurich's districts in {selected_year}")
 
@@ -67,13 +85,3 @@ fig_2024.update_layout(
 )
 
 st.plotly_chart(fig_2024, use_container_width=True)
-
-st.markdown("""
-**What this chart shows:**  
-How residents are distributed across districts for a selected year.  
-- Helps contextualize housing demand and availability.  
-
-**Important notes:**  
-- Does not account for population density within districts.  
-- Only permanent residents are included.
-""")
