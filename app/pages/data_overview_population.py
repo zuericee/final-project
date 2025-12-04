@@ -23,17 +23,17 @@ if show_df:
 
 st.subheader("How has the population of Zurich changed over time?")
 
-# --- City total over time ---
+#City total over time
 df_city_total = df.groupby('year', as_index=False)['population'].sum()
 df_city_total['district'] = "Ganze Stadt"
 
-# --- District totals over time ---
+#District totals over time
 df_district_total = df.groupby(['year','district'], as_index=False)['population'].sum()
 
-# --- Combine city total + districts ---
+#Combine city total + districts
 df_plot = pd.concat([df_city_total, df_district_total], ignore_index=True)
 
-# --- Multiselect for which districts to show (including city total) ---
+#Multiselect for which districts to show (including city total)
 all_districts = sorted(df_plot['district'].unique())
 selected_districts = st.multiselect(
     "Select districts to display:",
@@ -41,10 +41,10 @@ selected_districts = st.multiselect(
     default=all_districts  # by default, show all
 )
 
-# Filter for plotting
+#Filter for plotting
 df_plot_filtered = df_plot[df_plot['district'].isin(selected_districts)]
 
-# --- Plot ---
+#Plot line chart
 fig = px.line(
     df_plot_filtered,
     x='year',
@@ -70,7 +70,7 @@ df_district = (
 df_sub_info = df_filtered.groupby('district')['neighbourhood'].apply(list).reset_index()
 df_district = df_district.merge(df_sub_info, on='district', how='left')
 
-# Create bar chart with hover showing all subdistrict names
+#Create bar chart with hover showing all subdistrict names
 fig_2024 = px.bar(
     df_district,
     x='district',

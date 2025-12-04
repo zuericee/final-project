@@ -53,17 +53,17 @@ st.subheader("What is the distribution of apartment types in the city and per di
 district_options = df['district'].unique()
 selected_district_bar = st.selectbox("Select a city district:", district_options, key="bar_chart_selectbox")
 
-# Filter rows by selected city district and year 2024
+#Filter rows by selected city district and year 2024
 filtered_df = df[(df['district'] == selected_district_bar) & (df.iloc[:, -1] == 2024)]
 
 if not filtered_df.empty:
-    # Take the first matching row
+    #Take the first matching row
     row_values = filtered_df.iloc[0, 2:-1].tolist()  # skip first 2 columns and last column
 
-    # Labels from column headers (skip first 2 and last column)
+    #Labels from column headers (skip first 2 and last column)
     labels = df.columns[2:-1].tolist()
 
-    # Create bar chart
+    #Create bar chart
     fig = px.bar(
         x=labels,
         y=row_values,
@@ -75,7 +75,6 @@ if not filtered_df.empty:
     yaxis_title=""
     )
 
-    # Display in Streamlit
     st.plotly_chart(fig)
 else:
     st.warning(f"No data available for {selected_district_bar} in 2024.")

@@ -68,7 +68,7 @@ agg = (
     .reset_index()
 )
 
-# --- PLOT ---
+#Visualisation
 fig, ax = plt.subplots(figsize=(8, 4))
 
 num_rows = len(agg)
